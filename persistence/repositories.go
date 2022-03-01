@@ -29,3 +29,9 @@ func NewConnection(ctx context.Context, url string) (*Connection, error) {
 	return &Connection{Driver: drv, db: db}, nil
 
 }
+
+func (c *Connection) Close() {
+	if c != nil {
+		c.Driver.Close()
+	}
+}

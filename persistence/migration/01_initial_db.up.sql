@@ -1,4 +1,4 @@
-create table Users(
+create table users(
   id BIGINT PRIMARY KEY NOT NULL AUTO_INCREMENT,
   login VARCHAR(40) NOT NULL,
   name VARCHAR(120) NOT NULL,
@@ -7,7 +7,7 @@ create table Users(
   UNIQUE KEY unique_login(login)
 );
 
-create table Tasks(
+create table tasks(
   id BIGINT PRIMARY KEY NOT NULL AUTO_INCREMENT, 
   name VARCHAR(100) NOT NULL,
   summary VARCHAR(2500) NULL,
@@ -16,7 +16,7 @@ create table Tasks(
   user_id BIGINT NOT NULL,
   INDEX user_idx(user_id),
   FOREIGN KEY (user_id)
-    REFERENCES Users(id)
+    REFERENCES users(id)
     ON DELETE CASCADE
 );
 

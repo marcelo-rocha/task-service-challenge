@@ -10,4 +10,5 @@ type Task struct {
 	Summary      string
 	CreationDate time.Time
 	FinishDate   time.Time
+	UserId       int64
 }

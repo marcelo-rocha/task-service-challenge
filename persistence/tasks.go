@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/doug-martin/goqu/v9"
+	"github.com/marcelo-rocha/task-service-challenge/domain"
 	"github.com/marcelo-rocha/task-service-challenge/domain/entities"
 	"go.uber.org/zap"
 )
@@ -18,7 +19,14 @@ type Tasks struct {
 
 func scanTask(rows *sql.Rows) (entities.Task, error) {
 	var t entities.Task
-	err := rows.Scan(&t.Id, &t.Name, &t.Summary, &t.CreationDate, &t.FinishDate)
+	var nullDate sql.NullTime
+	err := rows.Scan(&t.Id, &t.Name, &t.Summary, &t.CreationDate, &nullDate, &t.UserId)
+	if err != nil {
+		return entities.Task{}, err
+	}
+	if nullDate.Valid {
+		t.FinishDate = nullDate.Time
+	}
 	return t, err
 }
 
@@ -30,54 +38,54 @@ func NewTasks(conn *Connection, logger *zap.Logger) *Tasks {
 	}
 }
 
-func (t *Tasks) InsertTask(ctx context.Context, name string, summary string, creationDate time.Time) (entities.Task, error) {
-	stmt := t.ds.Insert().Cols("name", "summary", "creation_date").Vals(
-		goqu.Vals{name},
-		goqu.Vals{summary},
-		goqu.Vals{creationDate},
-	)
-	sql, params, _ := stmt.ToSQL()
-	r, err := t.conn.Driver.ExecContext(ctx, sql, params...)
+func (t *Tasks) InsertTask(ctx context.Context, name string, summary string, creationDate time.Time, userId int64) (int64, error) {
+	stmt := t.ds.Insert().Cols("name", "summary", "creation_date", "user_id").Vals(
+		goqu.Vals{name, summary, creationDate, userId})
+	r, err := stmt.Executor().ExecContext(ctx)
 	if err != nil {
-		return entities.Task{}, err
+		return 0, err
 	}
 	var newId int64
 	if newId, err = r.LastInsertId(); err != nil {
 		t.logger.Error("failed to get new task Id", zap.Error(err))
 	}
-	return entities.Task{Id: newId}, nil
+	return newId, nil
 }
 
 func (t *Tasks) FinalizeTask(ctx context.Context, id int64, finish_date time.Time) error {
-	stmt := t.ds.Update().Set(goqu.Record{"finish_date": finish_date}).Where(goqu.Ex{"id": id})
-	sql, params, _ := stmt.ToSQL()
-
-	_, err := t.conn.Driver.ExecContext(ctx, sql, params...)
+	stmt := t.ds.Update().Set(goqu.Record{"finish_date": finish_date}).Where(
+		goqu.Ex{"id": id, "finish_date": nil})
+	r, err := stmt.Executor().ExecContext(ctx)
 	if err != nil {
 		return err
 	}
-
+	var count int64
+	if count, err = r.RowsAffected(); err != nil {
+		return err
+	} else if count == 0 {
+		_, err := t.GetTask(ctx, id)
+		if err != nil {
+			return err
+		}
+		return domain.ErrTaskAlreadyFinalized
+	}
 	return nil
 }
 
 func (t *Tasks) GetTask(ctx context.Context, id int64) (entities.Task, error) {
-
 	stmt := t.ds.Where(goqu.Ex{"id": id})
-	sql, params, _ := stmt.ToSQL()
-
-	rows, err := t.conn.Driver.QueryContext(ctx, sql, params...)
+	rows, err := stmt.Executor().QueryContext(ctx)
 	if err != nil {
 		return entities.Task{}, err
 	}
 	if !rows.Next() {
-		return entities.Task{}, entities.ErrUnknownTaskID
+		return entities.Task{}, domain.ErrTaskNotFound
 	}
 	task, err := scanTask(rows)
 	return task, err
 }
 
 func (t *Tasks) GetTasks(ctx context.Context, lastId int64, limit uint) ([]entities.Task, error) {
-
 	stmt := t.ds.Where(goqu.Ex{"id": goqu.Op{"gt": lastId}}).Order(goqu.C("id").Asc()).Limit(limit)
 	sql, params, _ := stmt.ToSQL()
 
