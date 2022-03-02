@@ -14,7 +14,8 @@ import (
 )
 
 type Config struct {
-	Server server.ServerCfg
+	Server      server.ServerCfg
+	Development bool `conf:"env:DEVELOPMENT,default:true"`
 }
 
 var cfg Config
@@ -26,7 +27,14 @@ func main() {
 		fmt.Println(instructions)
 		os.Exit(1)
 	}
-	logger, _ := zap.NewDevelopment()
+
+	var logger *zap.Logger
+	if cfg.Development {
+		logger, _ = zap.NewDevelopment()
+	} else {
+		logger, _ = zap.NewProduction()
+	}
+	defer logger.Sync()
 
 	srv := server.New(&cfg.Server, logger)
 	if err := srv.Init(context.Background()); err != nil {

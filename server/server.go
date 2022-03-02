@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -16,9 +17,9 @@ import (
 const DefaultSecretKey = "1863a2dfefc2f276e7e164ed2f2f7e975180f2ad7d22c3349f39ded08c11d7f7"
 
 type ServerCfg struct {
-	Addr      string `conf:"default:0.0.0.0:8080"`
-	SecretKey string
-	DBUrl     string
+	Addr      string `conf:"env:SV_ADDR,default:0.0.0.0:8080"`
+	SecretKey string `conf:"env:SV_SECRET_KEY"`
+	DBUrl     string `conf:"env:SV_DB_URL"`
 }
 
 type UseCases struct {
@@ -28,7 +29,7 @@ type UseCases struct {
 }
 
 type Server struct {
-	*UseCases
+	UseCases
 	cfg          *ServerCfg
 	logger       *zap.Logger
 	srv          *http.Server
@@ -37,11 +38,8 @@ type Server struct {
 
 func New(cfg *ServerCfg, logger *zap.Logger) *Server {
 	return &Server{
-		nil,
-		cfg,
-		logger,
-		nil,
-		nil,
+		cfg:    cfg,
+		logger: logger,
 	}
 }
 
@@ -59,7 +57,7 @@ func (s *Server) Init(ctx context.Context) error {
 
 	key := s.cfg.SecretKey
 	if key == "" {
-		key = DefaultSecretKey
+		return errors.New("secret key is empty")
 	}
 	AuthencationSecretKey, err = hex.DecodeString(key)
 	if err != nil {
@@ -110,4 +108,5 @@ func (s *Server) Shutdown(ctx context.Context) {
 }
 
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("Hello from Task service"))
 }

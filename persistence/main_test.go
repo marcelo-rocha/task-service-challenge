@@ -11,8 +11,6 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/ory/dockertest/v3"
 	"go.uber.org/zap"
-
-	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
 var db *Connection

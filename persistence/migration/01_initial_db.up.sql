@@ -4,7 +4,7 @@ create table users(
   name VARCHAR(120) NOT NULL,
   kind ENUM('technician', 'manager') NOT NULL,
   active BOOLEAN NOT NULL DEFAULT true,
-  manager_id int, 
+  manager_id BIGINT, 
   UNIQUE KEY unique_login(login),
   CONSTRAINT sr_fk_emp_man FOREIGN KEY (manager_id) REFERENCES users(id) 
 );

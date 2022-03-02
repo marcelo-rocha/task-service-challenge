@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/marcelo-rocha/task-service-challenge/domain/entities"
@@ -21,12 +22,18 @@ func authenticationMiddleware(next http.Handler) http.Handler {
 			w.Write([]byte("Malformed Token"))
 		} else {
 			jwtToken := authHeader[1]
-			token, _ := jwt.Parse(jwtToken, func(token *jwt.Token) (interface{}, error) {
+			token, err := jwt.Parse(jwtToken, func(token *jwt.Token) (interface{}, error) {
 				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 					return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 				}
 				return AuthencationSecretKey, nil
 			})
+
+			if err != nil {
+				w.WriteHeader(http.StatusUnauthorized)
+				w.Write([]byte("Invalid token"))
+				return
+			}
 
 			if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
 
@@ -40,7 +47,10 @@ func authenticationMiddleware(next http.Handler) http.Handler {
 				if v, ok = claims["sub"]; !ok {
 					goto Next
 				}
-				if userId, ok = v.(int64); !ok {
+				if s, ok = v.(string); !ok {
+					goto Next
+				}
+				if userId, err = strconv.ParseInt(s, 10, 64); err != nil {
 					goto Next
 				}
 
