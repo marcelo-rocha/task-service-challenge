@@ -4,7 +4,9 @@ create table users(
   name VARCHAR(120) NOT NULL,
   kind ENUM('technician', 'manager') NOT NULL,
   active BOOLEAN NOT NULL DEFAULT true,
-  UNIQUE KEY unique_login(login)
+  manager_id int, 
+  UNIQUE KEY unique_login(login),
+  CONSTRAINT sr_fk_emp_man FOREIGN KEY (manager_id) REFERENCES users(id) 
 );
 
 create table tasks(
