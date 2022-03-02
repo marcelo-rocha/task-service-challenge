@@ -66,7 +66,7 @@ func runMigrations() error {
 	wordDir, _ := os.Getwd()
 	driver, _ := mysql.WithInstance(db.Driver, &mysql.Config{})
 	migrate, err := migrate.NewWithDatabaseInstance(
-		fmt.Sprintf("file:///%s/migration", wordDir),
+		fmt.Sprintf("file:///%s/migration/sql", wordDir),
 		dbName, driver)
 	if err != nil {
 		return err

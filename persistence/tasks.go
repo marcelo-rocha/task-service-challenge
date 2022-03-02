@@ -93,7 +93,7 @@ func (t *Tasks) GetTasks(ctx context.Context, lastId int64, limit uint) ([]entit
 	if err != nil {
 		return []entities.Task{}, err
 	}
-	var result []entities.Task
+	result := []entities.Task{}
 	for rows.Next() {
 		task, err := scanTask(rows)
 		if err != nil {

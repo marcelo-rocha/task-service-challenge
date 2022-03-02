@@ -13,6 +13,6 @@ type Task struct {
 	Name         string    `json:"name"`
 	Summary      string    `json:"summary"`
 	CreationDate time.Time `json:"creation_date"`
-	FinishDate   time.Time `json:"finish_date"`
+	FinishDate   time.Time `json:"finish_date,omitempty"`
 	UserId       int64     `json:"user_id"`
 }
