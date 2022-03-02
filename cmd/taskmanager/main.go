@@ -4,18 +4,17 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/signal"
+	"time"
 
 	"go.uber.org/zap"
 
 	conf "github.com/ardanlabs/conf/v2"
-	"github.com/marcelo-rocha/task-service-challenge/domain/task"
-	"github.com/marcelo-rocha/task-service-challenge/persistence"
 	"github.com/marcelo-rocha/task-service-challenge/server"
 )
 
 type Config struct {
 	Server server.ServerCfg
-	DBUrl  string
 }
 
 var cfg Config
@@ -29,20 +28,34 @@ func main() {
 	}
 	logger, _ := zap.NewDevelopment()
 
-	connection, err := persistence.NewConnection(context.Background(), cfg.DBUrl)
-	if err != nil {
-		fmt.Println("failed to connect to database", err)
-		os.Exit(2)
-	}
-	defer connection.Close()
-
-	tasksRepository := persistence.NewTasks(connection, logger)
-
-	userCases := server.UserCases{
-		NewTaskUseCase:      task.NewTaskUseCase{Persistence: tasksRepository},
-		ListTasksUseCase:    task.ListTasksUseCase{Persistence: tasksRepository},
-		FinalizeTaskUseCase: task.FinalizeTaskUseCase{Persistence: tasksRepository},
+	srv := server.New(&cfg.Server, logger)
+	if err := srv.Init(context.Background()); err != nil {
+		logger.Fatal("initialization fail", zap.Error(err))
 	}
 
-	server.Run(&cfg.Server, logger, &userCases)
+	go func() {
+		if err := srv.Run(); err != nil {
+			logger.Info("run terminated", zap.Error(err))
+		}
+	}()
+
+	c := make(chan os.Signal, 1)
+	// We'll accept graceful shutdowns when quit via SIGINT (Ctrl+C)
+	// SIGKILL, SIGQUIT or SIGTERM (Ctrl+/) will not be caught.
+	signal.Notify(c, os.Interrupt)
+
+	// Block until we receive our signal.
+	<-c
+
+	// Create a deadline to wait for.
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+	// Doesn't block if no connections, but will otherwise wait
+	// until the timeout deadline.
+	srv.Shutdown(ctx)
+	// Optionally, you could run srv.Shutdown in a goroutine and block on
+	// <-ctx.Done() if your application should wait for other services
+	// to finalize based on context cancellation.
+	logger.Info("Shutting down")
+	os.Exit(0)
 }

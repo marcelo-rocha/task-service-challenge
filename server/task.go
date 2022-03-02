@@ -28,8 +28,8 @@ type ListTasksResponse struct {
 }
 
 type TasksHandler struct {
-	task.NewTaskUseCase
-	task.ListTasksUseCase
+	*task.NewTaskUseCase
+	*task.ListTasksUseCase
 	*zap.Logger
 }
 
@@ -87,7 +87,7 @@ func (h *TasksHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 type TaskFinishHandler struct {
-	task.FinalizeTaskUseCase
+	*task.FinalizeTaskUseCase
 	*zap.Logger
 }
 
