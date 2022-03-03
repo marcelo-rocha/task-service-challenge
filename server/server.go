@@ -81,7 +81,7 @@ func (s *Server) Init(ctx context.Context) error {
 	sr := r.PathPrefix("/api").Subrouter()
 	sr.Handle("/tasks", tasksHandler).Methods(http.MethodPost, http.MethodGet)
 	//s.HandleFunc("/tasks/{id}", handleGetTask).Methods(http.MethodGet)
-	sr.Handle("/tasks/{id}", finishHandler).Methods(http.MethodPatch)
+	sr.Handle("/tasks/{id}/finishing", finishHandler).Methods(http.MethodPost)
 	sr.Use(authenticationMiddleware)
 
 	s.srv = &http.Server{
