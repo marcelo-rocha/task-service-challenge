@@ -25,7 +25,8 @@ func scanTask(rows *sql.Rows) (entities.Task, error) {
 		return entities.Task{}, err
 	}
 	if nullDate.Valid {
-		t.FinishDate = nullDate.Time
+		var dt = nullDate.Time
+		t.FinishDate = &dt
 	}
 	return t, err
 }

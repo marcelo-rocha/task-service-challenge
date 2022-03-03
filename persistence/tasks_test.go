@@ -50,7 +50,7 @@ func TestFinishTask(t *testing.T) {
 	require.Equal(t, aTask.Name, readTask.Name)
 	require.Equal(t, aTask.Summary, readTask.Summary)
 	require.Equal(t, aTask.CreationDate, readTask.CreationDate)
-	require.Equal(t, finishDate, readTask.FinishDate)
+	require.Equal(t, finishDate, *readTask.FinishDate)
 
 }
 
