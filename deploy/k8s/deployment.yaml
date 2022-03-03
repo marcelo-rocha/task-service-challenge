@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: backend-container
-          image: marcelox11/task-service:latest
+          image: marcelox11/taskservicechallenge:latest
           resources:
             limits:
               memory: "256Mi"
