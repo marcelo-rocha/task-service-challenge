@@ -34,6 +34,7 @@ type Server struct {
 	logger       *zap.Logger
 	srv          *http.Server
 	dbConnection *persistence.Connection
+	Router       *mux.Router
 }
 
 func New(cfg *ServerCfg, logger *zap.Logger) *Server {
@@ -64,8 +65,8 @@ func (s *Server) Init(ctx context.Context) error {
 		return fmt.Errorf("failed to decode authentication secret key: %w", err)
 	}
 
-	r := mux.NewRouter()
-	r.HandleFunc("/", HomeHandler)
+	router := mux.NewRouter()
+	router.HandleFunc("/", HomeHandler)
 
 	tasksHandler := &TasksHandler{
 		NewTaskUseCase:   &s.NewTaskUseCase,
@@ -78,14 +79,15 @@ func (s *Server) Init(ctx context.Context) error {
 		Logger:              s.logger,
 	}
 
-	sr := r.PathPrefix("/api").Subrouter()
-	sr.Handle("/tasks", tasksHandler).Methods(http.MethodPost, http.MethodGet)
+	sub := router.PathPrefix("/api").Subrouter()
+	sub.Handle("/tasks", tasksHandler).Methods(http.MethodPost, http.MethodGet)
 	//s.HandleFunc("/tasks/{id}", handleGetTask).Methods(http.MethodGet)
-	sr.Handle("/tasks/{id}/finishing", finishHandler).Methods(http.MethodPost)
-	sr.Use(authenticationMiddleware)
+	sub.Handle("/tasks/{id}/finishing", finishHandler).Methods(http.MethodPost)
+	sub.Use(authenticationMiddleware)
 
+	s.Router = router
 	s.srv = &http.Server{
-		Handler:      r,
+		Handler:      router,
 		Addr:         s.cfg.Addr,
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,

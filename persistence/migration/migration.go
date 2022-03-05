@@ -11,15 +11,30 @@ import (
 //go:embed sql/*.sql
 var fs embed.FS
 
-func Up(url string) error {
+func newInstance(url string) (*migrate.Migrate, error) {
 	drv, err := iofs.New(fs, "sql")
 	if err != nil {
-		return err
+		return nil, err
 	}
 	m, err := migrate.NewWithSourceInstance("iofs", drv, url)
 	if err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func Up(url string) error {
+	m, err := newInstance(url)
+	if err != nil {
 		return err
 	}
-	err = m.Up()
-	return err
+	return m.Up()
+}
+
+func Down(url string) error {
+	m, err := newInstance(url)
+	if err != nil {
+		return err
+	}
+	return m.Down()
 }
