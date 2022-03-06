@@ -32,3 +32,4 @@ docker.stop ::
 
 migrate.up ::
 	dist/dbmigrate up
+

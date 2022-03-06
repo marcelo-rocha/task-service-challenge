@@ -4,6 +4,7 @@ go 1.17
 
 require (
 	github.com/ardanlabs/conf/v2 v2.2.0
+	github.com/avast/retry-go v3.0.0+incompatible
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/doug-martin/goqu/v9 v9.18.0
 	github.com/go-sql-driver/mysql v1.6.0

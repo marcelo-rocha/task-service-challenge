@@ -16,7 +16,7 @@ func TestGetTask(t *testing.T) {
 	srv.Init(context.Background())
 	apitest.New().
 		Handler(srv.Router).
-		Get("/").
+		Get("/api/tasks").
 		Expect(t).
 		Status(http.StatusOK).
 		End()

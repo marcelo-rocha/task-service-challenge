@@ -7,12 +7,13 @@ import (
 	"os"
 	"time"
 
+	"github.com/avast/retry-go"
 	_ "github.com/golang-migrate/migrate/v4/database/mysql"
 	"github.com/marcelo-rocha/task-service-challenge/persistence/migration"
 )
 
 var (
-	flagaddr = flag.String("addr", "mysql://root:secret7@(localhost:3306)/test?multiStatements=true&parseTime=true", "mysql connection")
+	flagaddr = flag.String("addr", "root:secret7@(127.0.0.1:3306)/test?multiStatements=true&parseTime=true", "mysql connection")
 	flagup   = flag.Bool("up", true, "run up migrations")
 	flagdown = flag.Bool("down", false, "run down migrations")
 )
@@ -26,21 +27,29 @@ func main() {
 		os.Exit(1)
 	}
 
-	// checking connection
-	db, err := Connect(*flagaddr)
-	if err != nil {
-		log.Println("db connection error", err)
+	var db *sql.DB
+	if err := retry.Do(func() error {
+		// checking connection
+		var e error
+		db, e = Connect(*flagaddr)
+		if e != nil {
+			return e
+		}
+		return db.Ping()
+	}, retry.Delay(time.Second*2), retry.Attempts(5), retry.DelayType(retry.BackOffDelay)); err != nil {
+		log.Println("connection failed", err)
 		os.Exit(2)
 	}
-	db.Close()
+
+	defer db.Close()
 
 	if *flagup {
-		if err = migration.Up(*flagaddr); err != nil {
+		if err := migration.Up(db); err != nil {
 			log.Println("migrate up error", err)
 			os.Exit(3)
 		}
 	} else if *flagdown {
-		if err = migration.Down(*flagaddr); err != nil {
+		if err := migration.Down(db); err != nil {
 			log.Println("migrate down error", err)
 			os.Exit(3)
 		}

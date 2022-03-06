@@ -47,7 +47,7 @@ func (u *Users) Truncate(ctx context.Context) error {
 	return err
 }
 
-func (u *Users) RestoreSetup(ctx context.Context) error {
+func (u *Users) RestoreInitialSetup(ctx context.Context) error {
 	if err := u.Truncate(ctx); err != nil {
 		return err
 	}

@@ -1,38 +1,42 @@
 package migration
 
 import (
+	"database/sql"
 	"embed"
 
 	"github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	"github.com/golang-migrate/migrate/v4/database/mysql"
+	_ "github.com/golang-migrate/migrate/v4/database/mysql"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 )
 
 //go:embed sql/*.sql
 var fs embed.FS
 
-func newInstance(url string) (*migrate.Migrate, error) {
-	drv, err := iofs.New(fs, "sql")
+func newInstance(db *sql.DB) (*migrate.Migrate, error) {
+	src, err := iofs.New(fs, "sql")
 	if err != nil {
 		return nil, err
 	}
-	m, err := migrate.NewWithSourceInstance("iofs", drv, url)
+	driver, _ := mysql.WithInstance(db, &mysql.Config{})
+
+	m, err := migrate.NewWithInstance("embed sql", src, "mysql", driver)
 	if err != nil {
 		return nil, err
 	}
 	return m, nil
 }
 
-func Up(url string) error {
-	m, err := newInstance(url)
+func Up(db *sql.DB) error {
+	m, err := newInstance(db)
 	if err != nil {
 		return err
 	}
 	return m.Up()
 }
 
-func Down(url string) error {
-	m, err := newInstance(url)
+func Down(db *sql.DB) error {
+	m, err := newInstance(db)
 	if err != nil {
 		return err
 	}
