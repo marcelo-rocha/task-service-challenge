@@ -16,28 +16,18 @@ var DefaultCfg = &ServerCfg{
 	DBUrl:     "root:secret7@(localhost:3306)/test?multiStatements=true&parseTime=true",
 }
 
-func TestMain(m *testing.M) {
+var srv *Server
+var logger *zap.Logger
 
+func TestMain(m *testing.M) {
+	logger, _ = zap.NewDevelopment()
+	srv = New(DefaultCfg, logger)
+	srv.Init(context.Background())
 	code := m.Run()
 	os.Exit(code)
 }
 
 func TestGetRoot(t *testing.T) {
-	logger, _ := zap.NewDevelopment()
-	srv := New(DefaultCfg, logger)
-	srv.Init(context.Background())
-	apitest.New().
-		Handler(srv.Router).
-		Get("/").
-		Expect(t).
-		Status(http.StatusOK).
-		End()
-}
-
-func TestGetTask(t *testing.T) {
-	logger, _ := zap.NewDevelopment()
-	srv := New(DefaultCfg, logger)
-	srv.Init(context.Background())
 	apitest.New().
 		Handler(srv.Router).
 		Get("/").

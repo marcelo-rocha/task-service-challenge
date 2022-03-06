@@ -2,6 +2,7 @@ package persistence
 
 import (
 	"context"
+	"errors"
 
 	"github.com/marcelo-rocha/task-service-challenge/domain/entities"
 
@@ -9,7 +10,7 @@ import (
 	"go.uber.org/zap"
 )
 
-const DefaultAdminUserId = 1 // This user is inserted on database migration
+var DefaultAdminUserId int64 = 1 // This user is inserted on database migration
 
 type Users struct {
 	conn   *Connection
@@ -26,7 +27,7 @@ func NewUsers(conn *Connection, logger *zap.Logger) *Users {
 }
 
 func (u *Users) InsertUser(ctx context.Context, login string, name string,
-	kind entities.UserKind, active bool, managerID int64) (int64, error) {
+	kind entities.UserKind, active bool, managerID *int64) (int64, error) {
 	stmt := u.ds.Insert().Cols("login", "name", "kind", "active", "manager_id").Vals(
 		goqu.Vals{login, name, string(kind), active, managerID})
 	r, err := stmt.Executor().ExecContext(ctx)
@@ -44,4 +45,18 @@ func (u *Users) Truncate(ctx context.Context) error {
 	stmt := u.ds.Truncate()
 	_, err := stmt.Executor().ExecContext(ctx)
 	return err
+}
+
+func (u *Users) RestoreSetup(ctx context.Context) error {
+	if err := u.Truncate(ctx); err != nil {
+		return err
+	}
+	id, err := u.InsertUser(ctx, "admin", "administrator", entities.Manager, true, nil)
+	if err != nil {
+		return err
+	}
+	if id != DefaultAdminUserId {
+		return errors.New("unexpected id")
+	}
+	return nil
 }

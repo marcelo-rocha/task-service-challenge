@@ -1,4 +1,4 @@
-package persistence
+package persistence_test
 
 import (
 	"context"
@@ -7,11 +7,12 @@ import (
 
 	"github.com/marcelo-rocha/task-service-challenge/domain"
 	"github.com/marcelo-rocha/task-service-challenge/domain/entities"
+	"github.com/marcelo-rocha/task-service-challenge/persistence"
 	"github.com/stretchr/testify/require"
 )
 
 func TestInsertTask(t *testing.T) {
-	repo := NewTasks(db, logger)
+	repo := persistence.NewTasks(db, logger)
 
 	aTask := entities.Task{
 		Name:         "create spreasheet",
@@ -30,7 +31,7 @@ func TestInsertTask(t *testing.T) {
 }
 
 func TestFinishTask(t *testing.T) {
-	repo := NewTasks(db, logger)
+	repo := persistence.NewTasks(db, logger)
 
 	aTask := entities.Task{
 		Name:         "create spreasheet",
@@ -55,7 +56,7 @@ func TestFinishTask(t *testing.T) {
 }
 
 func TestFinishTaskTwice(t *testing.T) {
-	repo := NewTasks(db, logger)
+	repo := persistence.NewTasks(db, logger)
 
 	aTask := entities.Task{
 		Name:         "create spreasheet",

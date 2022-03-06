@@ -1,4 +1,4 @@
-package persistence
+package persistence_test
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/marcelo-rocha/task-service-challenge/domain/entities"
+	"github.com/marcelo-rocha/task-service-challenge/persistence"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/mysql"
@@ -16,7 +17,7 @@ import (
 	"go.uber.org/zap"
 )
 
-var db *Connection
+var db *persistence.Connection
 var logger *zap.Logger
 
 const dbName = "test"
@@ -38,7 +39,7 @@ func TestMain(m *testing.M) {
 	// exponential backoff-retry, because the application in the container might not be ready to accept connections yet
 	if err := pool.Retry(func() error {
 		var err error
-		db, err = NewConnection(context.Background(), fmt.Sprintf("root:secret7@(localhost:%s)/%s?multiStatements=true&parseTime=true",
+		db, err = persistence.NewConnection(context.Background(), fmt.Sprintf("root:secret7@(localhost:%s)/%s?multiStatements=true&parseTime=true",
 			resource.GetPort("3306/tcp"), dbName))
 		if err != nil {
 			return err
@@ -52,7 +53,7 @@ func TestMain(m *testing.M) {
 		logger.Fatal("Could not run migrate", zap.Error(err))
 	}
 
-	if err := insertTestUsers(context.Background(), db, logger); err != nil {
+	if err := InsertTestUsers(context.Background(), db, logger); err != nil {
 		logger.Fatal("failed testing populate", zap.Error(err))
 	}
 
@@ -87,9 +88,9 @@ const (
 	OperatorUserId = 3
 )
 
-func insertTestUsers(ctx context.Context, conn *Connection, logger *zap.Logger) error {
-	users := NewUsers(conn, logger)
-	id, err := users.InsertUser(ctx, "demo", "demonstration", entities.Technician, true, DefaultAdminUserId)
+func InsertTestUsers(ctx context.Context, conn *persistence.Connection, logger *zap.Logger) error {
+	users := persistence.NewUsers(conn, logger)
+	id, err := users.InsertUser(ctx, "demo", "demonstration", entities.Technician, true, &persistence.DefaultAdminUserId)
 	if err != nil {
 		return err
 	}
@@ -97,7 +98,7 @@ func insertTestUsers(ctx context.Context, conn *Connection, logger *zap.Logger) 
 		return errors.New("unexpected id")
 	}
 
-	id, err = users.InsertUser(ctx, "operator", "operator assistent", entities.Technician, true, DefaultAdminUserId)
+	id, err = users.InsertUser(ctx, "operator", "operator assistent", entities.Technician, true, &persistence.DefaultAdminUserId)
 	if err != nil {
 		return err
 	}
