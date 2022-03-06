@@ -2,9 +2,12 @@ package persistence
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"testing"
+
+	"github.com/marcelo-rocha/task-service-challenge/domain/entities"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/mysql"
@@ -17,7 +20,6 @@ var db *Connection
 var logger *zap.Logger
 
 const dbName = "test"
-const DemoUserId = 2
 
 func TestMain(m *testing.M) {
 	logger, _ = zap.NewDevelopment()
@@ -50,6 +52,10 @@ func TestMain(m *testing.M) {
 		logger.Fatal("Could not run migrate", zap.Error(err))
 	}
 
+	if err := insertTestUsers(context.Background(), db, logger); err != nil {
+		logger.Fatal("failed testing populate", zap.Error(err))
+	}
+
 	code := m.Run()
 
 	db.Close()
@@ -74,4 +80,29 @@ func runMigrations() error {
 
 	return migrate.Up()
 
+}
+
+const (
+	DemoUserId     = 2
+	OperatorUserId = 3
+)
+
+func insertTestUsers(ctx context.Context, conn *Connection, logger *zap.Logger) error {
+	users := NewUsers(conn, logger)
+	id, err := users.InsertUser(ctx, "demo", "demonstration", entities.Technician, true, DefaultAdminUserId)
+	if err != nil {
+		return err
+	}
+	if id != DemoUserId {
+		return errors.New("unexpected id")
+	}
+
+	id, err = users.InsertUser(ctx, "operator", "operator assistent", entities.Technician, true, DefaultAdminUserId)
+	if err != nil {
+		return err
+	}
+	if id != OperatorUserId {
+		return errors.New("unexpected id")
+	}
+	return nil
 }

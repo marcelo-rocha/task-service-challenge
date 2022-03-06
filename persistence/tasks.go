@@ -88,9 +88,8 @@ func (t *Tasks) GetTask(ctx context.Context, id int64) (entities.Task, error) {
 
 func (t *Tasks) GetTasks(ctx context.Context, lastId int64, limit uint) ([]entities.Task, error) {
 	stmt := t.ds.Where(goqu.Ex{"id": goqu.Op{"gt": lastId}}).Order(goqu.C("id").Asc()).Limit(limit)
-	sql, params, _ := stmt.ToSQL()
 
-	rows, err := t.conn.Driver.QueryContext(ctx, sql, params...)
+	rows, err := stmt.Executor().QueryContext(ctx)
 	if err != nil {
 		return []entities.Task{}, err
 	}
@@ -103,4 +102,10 @@ func (t *Tasks) GetTasks(ctx context.Context, lastId int64, limit uint) ([]entit
 		result = append(result, task)
 	}
 	return result, nil
+}
+
+func (t *Tasks) Truncate(ctx context.Context) error {
+	stmt := t.ds.Truncate()
+	_, err := stmt.Executor().ExecContext(ctx)
+	return err
 }

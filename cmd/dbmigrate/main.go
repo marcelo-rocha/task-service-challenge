@@ -26,6 +26,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	// checking connection
 	db, err := Connect(*flagaddr)
 	if err != nil {
 		log.Println("db connection error", err)
@@ -39,8 +40,10 @@ func main() {
 			os.Exit(3)
 		}
 	} else if *flagdown {
-		log.Println("not implemented")
-		os.Exit(3)
+		if err = migration.Down(*flagaddr); err != nil {
+			log.Println("migrate down error", err)
+			os.Exit(3)
+		}
 	}
 }
 
