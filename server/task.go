@@ -49,7 +49,9 @@ func (h *TasksHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		w.WriteHeader(http.StatusCreated)
 		responseBody := NewTaskResponse{TaskId: taskId}
-		if err := json.NewEncoder(w).Encode(&responseBody); err != nil {
+		encoder := json.NewEncoder(w)
+		encoder.SetIndent("", "")
+		if err := encoder.Encode(&responseBody); err != nil {
 			h.Logger.Warn("write response failed", zap.Error(err))
 		}
 	} else if r.Method == http.MethodGet {
@@ -78,7 +80,9 @@ func (h *TasksHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		body := ListTasksResponse{Tasks: list}
-		if err := json.NewEncoder(w).Encode(&body); err != nil {
+		encoder := json.NewEncoder(w)
+		encoder.SetIndent("", "")
+		if err := encoder.Encode(&body); err != nil {
 			h.Logger.Warn("write response failed", zap.Error(err))
 		}
 	} else {

@@ -9,10 +9,12 @@ import (
 	"github.com/marcelo-rocha/task-service-challenge/domain/entities"
 	"github.com/marcelo-rocha/task-service-challenge/domain/user"
 
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt/v4"
 )
 
 var AuthencationSecretKey []byte
+
+const UserKindClaim = "taskschallenge.user_kind"
 
 func authenticationMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

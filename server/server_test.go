@@ -6,9 +6,11 @@ import (
 	"net/http"
 	"os"
 	"testing"
+	"time"
 
 	"go.uber.org/zap"
 
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/marcelo-rocha/task-service-challenge/domain/entities"
 	"github.com/marcelo-rocha/task-service-challenge/persistence"
 	"github.com/steinfletcher/apitest"
@@ -66,4 +68,16 @@ func insertTestUsers(ctx context.Context, users *persistence.Users) error {
 		return errors.New("unexpected id")
 	}
 	return nil
+}
+
+func getAdminToken() (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub":         "1",
+		"iat":         time.Now().UTC().Unix(),
+		UserKindClaim: string(entities.Manager),
+	})
+
+	// Sign and get the complete encoded token as a string using the secret
+	tokenString, err := token.SignedString(AuthencationSecretKey)
+	return tokenString, err
 }
