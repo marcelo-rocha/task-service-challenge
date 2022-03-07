@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 
@@ -19,10 +20,12 @@ import (
 var DefaultCfg = &ServerCfg{
 	SecretKey: "f8e03b9275d79e802b593409e6073a1ff31be30c0dc72566870bb7d7d992e630", // Base64: +OA7knXXnoArWTQJ5gc6H/Mb4wwNxyVmhwu319mS5jA=
 	DBUrl:     "root:secret7@(localhost:3306)/test?multiStatements=true&parseTime=true",
+	NATSUrl:   "localhost:4222",
 }
 
 var srv *Server
 var logger *zap.Logger
+var tasks *persistence.Tasks
 
 func TestMain(m *testing.M) {
 	logger, _ = zap.NewDevelopment()
@@ -30,6 +33,7 @@ func TestMain(m *testing.M) {
 	ctx := context.Background()
 	srv.Init(ctx)
 	users := persistence.NewUsers(srv.dbConnection, srv.logger)
+	tasks = persistence.NewTasks(srv.dbConnection, srv.logger)
 	insertTestUsers(ctx, users)
 	code := m.Run()
 	users.RestoreInitialSetup(ctx)
@@ -72,9 +76,33 @@ func insertTestUsers(ctx context.Context, users *persistence.Users) error {
 
 func getAdminToken() (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub":         "1",
+		"sub":         strconv.Itoa(int(persistence.DefaultAdminUserId)),
 		"iat":         time.Now().UTC().Unix(),
 		UserKindClaim: string(entities.Manager),
+	})
+
+	// Sign and get the complete encoded token as a string using the secret
+	tokenString, err := token.SignedString(AuthencationSecretKey)
+	return tokenString, err
+}
+
+func getDemoToken() (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub":         strconv.Itoa(int(DemoUserId)),
+		"iat":         time.Now().UTC().Unix(),
+		UserKindClaim: string(entities.Technician),
+	})
+
+	// Sign and get the complete encoded token as a string using the secret
+	tokenString, err := token.SignedString(AuthencationSecretKey)
+	return tokenString, err
+}
+
+func getOperatorToken() (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub":         strconv.Itoa(int(OperatorUserId)),
+		"iat":         time.Now().UTC().Unix(),
+		UserKindClaim: string(entities.Technician),
 	})
 
 	// Sign and get the complete encoded token as a string using the secret

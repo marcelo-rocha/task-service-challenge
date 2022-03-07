@@ -23,6 +23,9 @@ var _ task.ListTasksPersister = &ListTasksPersisterMock{}
 // 			GetTasksFunc: func(ctx context.Context, lastId int64, limit uint) ([]entities.Task, error) {
 // 				panic("mock out the GetTasks method")
 // 			},
+// 			GetTasksByUserFunc: func(ctx context.Context, lastId int64, limit uint, userID int64) ([]entities.Task, error) {
+// 				panic("mock out the GetTasksByUser method")
+// 			},
 // 		}
 //
 // 		// use mockedListTasksPersister in code that requires task.ListTasksPersister
@@ -32,6 +35,9 @@ var _ task.ListTasksPersister = &ListTasksPersisterMock{}
 type ListTasksPersisterMock struct {
 	// GetTasksFunc mocks the GetTasks method.
 	GetTasksFunc func(ctx context.Context, lastId int64, limit uint) ([]entities.Task, error)
+
+	// GetTasksByUserFunc mocks the GetTasksByUser method.
+	GetTasksByUserFunc func(ctx context.Context, lastId int64, limit uint, userID int64) ([]entities.Task, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -44,8 +50,20 @@ type ListTasksPersisterMock struct {
 			// Limit is the limit argument value.
 			Limit uint
 		}
+		// GetTasksByUser holds details about calls to the GetTasksByUser method.
+		GetTasksByUser []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// LastId is the lastId argument value.
+			LastId int64
+			// Limit is the limit argument value.
+			Limit uint
+			// UserID is the userID argument value.
+			UserID int64
+		}
 	}
-	lockGetTasks sync.RWMutex
+	lockGetTasks       sync.RWMutex
+	lockGetTasksByUser sync.RWMutex
 }
 
 // GetTasks calls GetTasksFunc.
@@ -88,5 +106,52 @@ func (mock *ListTasksPersisterMock) GetTasksCalls() []struct {
 	mock.lockGetTasks.RLock()
 	calls = mock.calls.GetTasks
 	mock.lockGetTasks.RUnlock()
+	return calls
+}
+
+// GetTasksByUser calls GetTasksByUserFunc.
+func (mock *ListTasksPersisterMock) GetTasksByUser(ctx context.Context, lastId int64, limit uint, userID int64) ([]entities.Task, error) {
+	callInfo := struct {
+		Ctx    context.Context
+		LastId int64
+		Limit  uint
+		UserID int64
+	}{
+		Ctx:    ctx,
+		LastId: lastId,
+		Limit:  limit,
+		UserID: userID,
+	}
+	mock.lockGetTasksByUser.Lock()
+	mock.calls.GetTasksByUser = append(mock.calls.GetTasksByUser, callInfo)
+	mock.lockGetTasksByUser.Unlock()
+	if mock.GetTasksByUserFunc == nil {
+		var (
+			tasksOut []entities.Task
+			errOut   error
+		)
+		return tasksOut, errOut
+	}
+	return mock.GetTasksByUserFunc(ctx, lastId, limit, userID)
+}
+
+// GetTasksByUserCalls gets all the calls that were made to GetTasksByUser.
+// Check the length with:
+//     len(mockedListTasksPersister.GetTasksByUserCalls())
+func (mock *ListTasksPersisterMock) GetTasksByUserCalls() []struct {
+	Ctx    context.Context
+	LastId int64
+	Limit  uint
+	UserID int64
+} {
+	var calls []struct {
+		Ctx    context.Context
+		LastId int64
+		Limit  uint
+		UserID int64
+	}
+	mock.lockGetTasksByUser.RLock()
+	calls = mock.calls.GetTasksByUser
+	mock.lockGetTasksByUser.RUnlock()
 	return calls
 }

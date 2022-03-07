@@ -2,6 +2,7 @@ package task
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/marcelo-rocha/task-service-challenge/domain/entities"
@@ -12,11 +13,17 @@ import (
 
 type FinalizeTaskUseCase struct {
 	Persistence FinalizeTaskPersister
+	MQ          Publisher
+	MsgSubject  string
 }
 
 type FinalizeTaskPersister interface {
 	FinalizeTask(ctx context.Context, id int64, finishDate time.Time) error
 	GetTask(ctx context.Context, id int64) (entities.Task, error)
+}
+
+type Publisher interface {
+	Publish(subject string, msg string) error
 }
 
 func (u *FinalizeTaskUseCase) FinalizeTask(ctx context.Context, id int64) error {
@@ -30,9 +37,18 @@ func (u *FinalizeTaskUseCase) FinalizeTask(ctx context.Context, id int64) error 
 	if err != nil {
 		return err
 	}
-	if userInfo.Kind != entities.Technician || userInfo.Id != aTask.UserId {
+	if userInfo.Id != aTask.UserId {
 		return ErrNotAllowed
 	}
 
-	return u.Persistence.FinalizeTask(ctx, id, time.Now())
+	now := time.Now()
+	err = u.Persistence.FinalizeTask(ctx, id, now)
+	if err != nil {
+		return err
+	}
+	finishDate, _ := now.UTC().MarshalText()
+
+	u.MQ.Publish(u.MsgSubject, fmt.Sprintf("The tech %v performed the task '%v' on %v", userInfo.Id, aTask.Name, string(finishDate)))
+
+	return nil
 }

@@ -28,6 +28,11 @@ func TestInsertTask(t *testing.T) {
 	require.Equal(t, aTask.Name, readTask.Name)
 	require.Equal(t, aTask.Summary, readTask.Summary)
 	require.Equal(t, aTask.CreationDate, readTask.CreationDate)
+
+	tasks, err := repo.GetTasksByUser(context.Background(), 0, 10, DemoUserId)
+	require.NoError(t, err)
+
+	require.Len(t, tasks, 1)
 }
 
 func TestFinishTask(t *testing.T) {

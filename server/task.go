@@ -27,66 +27,68 @@ type ListTasksResponse struct {
 	Tasks []entities.Task `json:"tasks"`
 }
 
-type TasksHandler struct {
-	*task.NewTaskUseCase
+type ListTasksHandler struct {
 	*task.ListTasksUseCase
+	*zap.Logger
+}
+
+type NewTasksHandler struct {
+	*task.NewTaskUseCase
 	*zap.Logger
 }
 
 const DefaultPageLength = 30
 
-func (h *TasksHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
-		var content NewTaskRequest
-		err := json.NewDecoder(r.Body).Decode(&content)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
+func (h *NewTasksHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	var content NewTaskRequest
+	err := json.NewDecoder(r.Body).Decode(&content)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	taskId, err := h.NewTaskUseCase.NewTask(r.Context(), content.Name, content.Summary)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	w.WriteHeader(http.StatusCreated)
+	responseBody := NewTaskResponse{TaskId: taskId}
+	encoder := json.NewEncoder(w)
+	encoder.SetIndent("", "")
+	if err := encoder.Encode(&responseBody); err != nil {
+		h.Logger.Warn("write response failed", zap.Error(err))
+	}
+}
+
+func (h *ListTasksHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	lastId := 0
+	if s, found := mux.Vars(r)["last_id"]; found {
+		var err error
+		if lastId, err = strconv.Atoi(s); err != nil {
+			lastId = 0
 		}
-		taskId, err := h.NewTaskUseCase.NewTask(r.Context(), content.Name, content.Summary)
-		if err != nil {
+	}
+	limit := DefaultPageLength
+	if s, found := mux.Vars(r)["limit"]; found {
+		var err error
+		if limit, err = strconv.Atoi(s); err != nil {
+			lastId = DefaultPageLength
+		}
+	}
+	list, err := h.ListTasksUseCase.ListTasks(r.Context(), int64(lastId), uint(limit))
+	if err != nil {
+		if err == task.ErrNotAllowed {
+			http.Error(w, err.Error(), http.StatusForbidden)
+		} else {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
-		w.WriteHeader(http.StatusCreated)
-		responseBody := NewTaskResponse{TaskId: taskId}
-		encoder := json.NewEncoder(w)
-		encoder.SetIndent("", "")
-		if err := encoder.Encode(&responseBody); err != nil {
-			h.Logger.Warn("write response failed", zap.Error(err))
-		}
-	} else if r.Method == http.MethodGet {
-		lastId := 0
-		if s, found := mux.Vars(r)["last_id"]; found {
-			var err error
-			if lastId, err = strconv.Atoi(s); err != nil {
-				lastId = 0
-			}
-		}
-		limit := DefaultPageLength
-		if s, found := mux.Vars(r)["limit"]; found {
-			var err error
-			if limit, err = strconv.Atoi(s); err != nil {
-				lastId = DefaultPageLength
-			}
-		}
-		list, err := h.ListTasksUseCase.ListTasks(r.Context(), int64(lastId), uint(limit))
-		if err != nil {
-			if err == task.ErrNotAllowed {
-				http.Error(w, err.Error(), http.StatusForbidden)
-			} else {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-			}
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		body := ListTasksResponse{Tasks: list}
-		encoder := json.NewEncoder(w)
-		encoder.SetIndent("", "")
-		if err := encoder.Encode(&body); err != nil {
-			h.Logger.Warn("write response failed", zap.Error(err))
-		}
-	} else {
-		http.Error(w, "unexpected method", http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	body := ListTasksResponse{Tasks: list}
+	encoder := json.NewEncoder(w)
+	encoder.SetIndent("", "")
+	if err := encoder.Encode(&body); err != nil {
+		h.Logger.Warn("write response failed", zap.Error(err))
 	}
 }
 

@@ -15,6 +15,7 @@ type ListTasksUseCase struct {
 
 type ListTasksPersister interface {
 	GetTasks(ctx context.Context, lastId int64, limit uint) ([]entities.Task, error)
+	GetTasksByUser(ctx context.Context, lastId int64, limit uint, userID int64) ([]entities.Task, error)
 }
 
 func (c *ListTasksUseCase) ListTasks(ctx context.Context, lastTaskId int64, limit uint) ([]entities.Task, error) {
@@ -24,14 +25,15 @@ func (c *ListTasksUseCase) ListTasks(ctx context.Context, lastTaskId int64, limi
 		return []entities.Task{}, err
 	}
 
+	var aTasks []entities.Task
 	if userInfo.Kind != entities.Manager {
-		return []entities.Task{}, ErrNotAllowed
+		aTasks, err = c.Persistence.GetTasksByUser(ctx, lastTaskId, limit, userInfo.Id)
+	} else {
+		aTasks, err = c.Persistence.GetTasks(ctx, lastTaskId, limit)
 	}
 
-	aTasks, err := c.Persistence.GetTasks(ctx, lastTaskId, limit)
 	if err != nil {
 		return []entities.Task{}, err
 	}
-
 	return aTasks, nil
 }

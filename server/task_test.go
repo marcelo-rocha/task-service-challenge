@@ -5,17 +5,12 @@ import (
 	"net/http"
 	"testing"
 
-	"go.uber.org/zap"
-
 	"github.com/steinfletcher/apitest"
-	"github.com/stretchr/testify/assert"
+	jsonpath "github.com/steinfletcher/apitest-jsonpath"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGetTask(t *testing.T) {
-	logger, _ := zap.NewDevelopment()
-	srv := New(DefaultCfg, logger)
-	srv.Init(context.Background())
-
 	apitest.New().
 		Handler(srv.Router).
 		Get("/api/tasks").
@@ -24,7 +19,7 @@ func TestGetTask(t *testing.T) {
 		End()
 
 	token, err := getAdminToken()
-	assert.Nil(t, err)
+	require.NoError(t, err)
 
 	apitest.New().
 		Handler(srv.Router).
@@ -32,6 +27,81 @@ func TestGetTask(t *testing.T) {
 		Header("Authorization", "Bearer "+token).
 		Expect(t).
 		Body(`{"tasks":[]}`).
+		Status(http.StatusOK).
+		End()
+
+}
+
+func TestPostTask(t *testing.T) {
+	ctx := context.Background()
+	defer tasks.Truncate(ctx)
+
+	demoToken, err := getDemoToken()
+	require.NoError(t, err)
+	operatorToken, err := getOperatorToken()
+	require.NoError(t, err)
+	adminToken, err := getAdminToken()
+	require.NoError(t, err)
+
+	apitest.New().
+		Handler(srv.Router).
+		Post("/api/tasks").
+		Header("Authorization", "Bearer "+demoToken).
+		JSON(`{"name": "setup", "summary": "create spreasheet"}`).
+		Expect(t).
+		Status(http.StatusCreated).
+		End()
+
+	apitest.New().
+		Handler(srv.Router).
+		Post("/api/tasks").
+		Header("Authorization", "Bearer "+operatorToken).
+		JSON(`{"name": "prepare", "summary": "prepare workspace"}`).
+		Expect(t).
+		Status(http.StatusCreated).
+		End()
+
+	apitest.New().
+		Handler(srv.Router).
+		Get("/api/tasks").
+		Header("Authorization", "Bearer "+demoToken).
+		Expect(t).
+		Status(http.StatusOK).
+		Assert(jsonpath.Len("$.tasks", 1)).
+		End()
+
+	apitest.New().
+		Handler(srv.Router).
+		Get("/api/tasks").
+		Header("Authorization", "Bearer "+adminToken).
+		Expect(t).
+		Status(http.StatusOK).
+		Assert(jsonpath.Len("$.tasks", 2)).
+		End()
+
+}
+
+func TestFinishTask(t *testing.T) {
+	ctx := context.Background()
+	defer tasks.Truncate(ctx)
+
+	demoToken, err := getDemoToken()
+	require.NoError(t, err)
+
+	apitest.New().
+		Handler(srv.Router).
+		Post("/api/tasks").
+		Header("Authorization", "Bearer "+demoToken).
+		JSON(`{"name": "setup", "summary": "create spreasheet"}`).
+		Expect(t).
+		Status(http.StatusCreated).
+		End()
+
+	apitest.New().
+		Handler(srv.Router).
+		Post("/api/tasks/1/finishing").
+		Header("Authorization", "Bearer "+demoToken).
+		Expect(t).
 		Status(http.StatusOK).
 		End()
 

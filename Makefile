@@ -33,3 +33,5 @@ docker.stop ::
 migrate.up ::
 	dist/dbmigrate up
 
+test.server: docker.start.debug migrate.up
+	go test ./server

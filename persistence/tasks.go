@@ -104,6 +104,27 @@ func (t *Tasks) GetTasks(ctx context.Context, lastId int64, limit uint) ([]entit
 	return result, nil
 }
 
+func (t *Tasks) GetTasksByUser(ctx context.Context, lastId int64, limit uint, userID int64) ([]entities.Task, error) {
+	stmt := t.ds.Where(goqu.Ex{
+		"id":      goqu.Op{"gt": lastId},
+		"user_id": userID,
+	}).Order(goqu.C("id").Asc()).Limit(limit)
+
+	rows, err := stmt.Executor().QueryContext(ctx)
+	if err != nil {
+		return []entities.Task{}, err
+	}
+	result := []entities.Task{}
+	for rows.Next() {
+		task, err := scanTask(rows)
+		if err != nil {
+			return []entities.Task{}, err
+		}
+		result = append(result, task)
+	}
+	return result, nil
+}
+
 func (t *Tasks) Truncate(ctx context.Context) error {
 	stmt := t.ds.Truncate()
 	_, err := stmt.Executor().ExecContext(ctx)
